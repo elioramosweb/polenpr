@@ -2,9 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 from PIL import Image,ImageDraw,ImageOps
-from tqdm import tqdm
 import streamlit as st
-from stqdm import stqdm
 import pandas as pd
 import plotly.express as px
 import glob

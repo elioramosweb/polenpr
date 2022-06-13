@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-from PIL import Image,ImageDraw,ImageOps
+from PIL import Image,ImageDraw,ImageOps,ImageEnhance
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -10,7 +10,6 @@ import os
 import pickle
 import requests
 from io import BytesIO
-from pathlib import Path
 
 
 
@@ -57,7 +56,7 @@ def prob_barplot(df):
     
     fig = px.bar(df, x='especie', y='probabilidad',
                  color="probabilidad",
-                 color_continuous_scale=px.colors.sequential.Reds,
+                 color_continuous_scale=px.colors.sequential.Redor,
                  orientation="v")
 
     fig.update_layout(margin={"r": 5, "t": 50, "l": 1, "b": 1},
@@ -105,14 +104,16 @@ def crop_max_square(pil_img):
 ## titulo
 ######### 
 
-st.title("Clasificador de Polen")
+#st.title("<font color='#f63366'>Clasificador de Polen</font>")
+
+st.markdown("<h1><font color='#f63366'>Clasificador de Polen </font></h1>",unsafe_allow_html=True)
+
 
 st.subheader("Utilizando un Modelo de Redes Neuronales Convolucionales")
 
 ## cargar modelo de clasificación 
 
 model = keras.models.load_model('modelo51000.h5')
-
 
 
 st.sidebar.image("polen_bonito.png")
@@ -127,6 +128,13 @@ col1, col2 = st.columns(2)
 ############################ 
 
 mostrarTexto = st.sidebar.checkbox('Mostrar texto informátivo',value=True)
+
+
+########################################
+## checkbox de mostrar titulo de sección
+########################################
+
+mostrarSeccion= st.sidebar.checkbox('Mostrar texto de sección por especie',value=True)
 
 ################################
 ## checkbox de mostrar imágenes
@@ -146,7 +154,24 @@ mostrarBarra = st.sidebar.checkbox('Mostrar Gráfico Barras',value=True)
 
 mostrarTabla = st.sidebar.checkbox('Mostrar Tabla con clasificación',value=True)
 
+
+########################################
+## checkbox para utilizar image enhancer
+########################################
+
+mostrarEnhancer = st.sidebar.checkbox('Mejorar imagen',value=False)
+
+
 st.sidebar.markdown("<hr>",unsafe_allow_html=True)
+
+enhanceFactor = 1.0
+
+if mostrarEnhancer: 
+    st.sidebar.markdown("<b><font color='#f63366'>Factor para mejorar imagen. Oprima Enter luego de entrar valor número.</font></b>",unsafe_allow_html=True)
+    st.sidebar.markdown("<p align='justify'> Si el factor es 1.0 <u>la imagen se queda igual</u>. Valores mayores de 1.0 implica mayor contraste, mayor brillo, y más colores.\
+        Valores menores de 1.0 implica menor constraste, menor brillo, etc.</p>",unsafe_allow_html=True)
+    enhanceFactor = st.sidebar.text_input('Factor para mejorar imagen', value='1.0')
+    st.sidebar.markdown("<hr>",unsafe_allow_html=True)
 
 ###############
 ## SUBIR IMAGEN
@@ -198,14 +223,16 @@ if images is not None:
 
     for image in images:
 
-        ## ajusstar dimensiones de imagen de entrada 
+        ## ajustar dimensiones de imagen de entrada 
 
         imageOriginal = load_image(image)
-    
-        imageCrop = crop_max_square(imageOriginal)
-    
+
+        tt = ImageEnhance.Contrast(imageOriginal).enhance(float(enhanceFactor))
+
+        imageCrop = crop_max_square(tt)
+
         imageResize = ImageOps.grayscale(imageCrop).resize((50,50))
-    
+ 
         ## hacer predicción con el modelo 
 
         probs,classPredict = predictImage(reshapeImage(imageResize))
@@ -223,7 +250,12 @@ if images is not None:
     
         df["probabilidad"] *= 100
         
-    
+        ## MOSTRAR TITULO DE SECCION 
+
+        if mostrarSeccion:
+            st.markdown("<hr>",unsafe_allow_html=True)
+            st.markdown("<b><font color='#f63366'>"  + image.name + "</font></b>",unsafe_allow_html=True)        
+
         ## GRAFICO DE BARRAS 
     
         if mostrarBarra:
@@ -240,19 +272,24 @@ if images is not None:
 
         col = {}
     
-        col[0],col[1],col[2],col[3],col[4],col[5] = st.columns(6)
+        col[0],col[1],col[2],col[3],col[4],col[5],col[6] = st.columns(7)
         
         gitPath= "https://raw.githubusercontent.com/elioramosweb/plantasOne/main/"
       
+
         # IMAGENES EN COLORES 
     
         if mostrarImagen:
 
             col[0].image(imageOriginal,width=100,caption=image.name)
-    
+            col[1].image("flecha.png",width=100)
+
         listaImagenes = []
 
-        listaImagenes.append(image.name)
+        if enhanceFactor == 1.0:
+            listaImagenes.append(image.name)
+        else:
+            listaImagenes.append(image.name + " enhance(" + str(enhanceFactor) + ")")
     
         for i in range(5):
     
@@ -271,17 +308,19 @@ if images is not None:
             listaImagenes.append(imageCaption)
 
             if mostrarImagen:
-                col[i+1].image(fig2,width=100,caption=imageCaption)
+                col[i+2].image(fig2,width=100,caption=imageCaption)
        
+        ##st.markdown("<hr>",unsafe_allow_html=True)
+
         my_bar.progress(round(100*(inx/largo)))
 
         inx += 1
 
         listaDF.append(listaImagenes)
-    
 
     ## creacion de archivo de salida 
-
+    
+    #print(listDF)
     
     if len(listaDF) > 0:
 
@@ -294,6 +333,7 @@ if images is not None:
         dfOutput = dfOutput.drop_duplicates( keep='last')
 
         if mostrarTabla:
+            st.markdown("<hr>",unsafe_allow_html=True)
             st.markdown("<b><font color='#f63366'>Tabla de resultados</font></b>",unsafe_allow_html=True)
             st.dataframe(dfOutput.sort_index())
 
@@ -310,4 +350,4 @@ if images is not None:
             "resultados.csv",
             "text/csv",
             key='download-csv'
-            )
+            ) 

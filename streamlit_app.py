@@ -113,7 +113,7 @@ st.subheader("Utilizando un Modelo de Redes Neuronales Convolucionales")
 
 ## cargar modelo de clasificación 
 
-model = keras.models.load_model('modelo51000.h5')
+model = keras.models.load_model('modelo102000.h5')
 
 
 st.sidebar.image("polen_bonito.png")
